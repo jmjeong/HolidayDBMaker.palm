@@ -25,9 +25,9 @@
 #define DateBookNotifyFormCancel 1020
 #define DateBookFormHelpString 1019
 #define DateBookForm 1018
-#define MainDBCleanupButton 1017
-#define MainDBNotifyButton 1016
-#define MainGenerateButton 1015
+#define MainGenerateButton 1017
+#define MainDBCleanupButton 1016
+#define MainDBNotifyButton 1015
 #define MainFieldScrollBar 1014
 #define MainField 1013
 #define MainForm 1012
@@ -35,7 +35,7 @@
 #define OptionsAboutHolidayDBMaker 1010
 #define OptionsHelp 1009
 #define OptionsPreferences 1007
-#define OptionsCleanupDatebook 1005
-#define OptionsNotifyDatebook 1004
-#define OptionsGenerate 1002
+#define OptionsGenerate 1005
+#define OptionsCleanupDatebook 1003
+#define OptionsNotifyDatebook 1002
 #define MainMenuBar 1001

@@ -11,10 +11,10 @@ MENU ID MainMenuBar
 BEGIN
     PULLDOWN "Utility"
     BEGIN
-        MENUITEM "Generate HolidayDB"  ID OptionsGenerate "H"
-        MENUITEM SEPARATOR
         MENUITEM "DateBook Notify"  ID OptionsNotifyDatebook  "D"
         MENUITEM "Cleanup DateBook" ID OptionsCleanupDatebook "C"
+        MENUITEM SEPARATOR
+        MENUITEM "Generate HolidayDB"  ID OptionsGenerate "H"
     END
     PULLDOWN "Edit"
     BEGIN
@@ -75,9 +75,11 @@ BEGIN
         UNDERLINED
         MAXCHARS 1024*32 HASSCROLLBAR
     SCROLLBAR MainFieldScrollBar AT (PrevRight+2 PrevTop 7 PrevHeight) USABLE VALUE 0 MIN 0 MAX 0 PAGESIZE 0
-    BUTTON "HoliDB" ID MainGenerateButton  AT (1 147 AUTO 12)
-    BUTTON "DateBook" ID MainDBNotifyButton AT (PrevRight+8 PrevTop AUTO PrevHeight)
-    BUTTON "Cleanup" ID MainDBCleanupButton AT (PrevRight+4 PrevTop AUTO PrevHeight)
+    BUTTON "DateBook" ID MainDBNotifyButton AT (1 147 AUTO AUTO)
+    BUTTON "Cleanup" ID MainDBCleanupButton AT (PrevRight+4 PrevTop 
+										AUTO PrevHeight)
+    BUTTON "HoliDB" ID MainGenerateButton  AT (PrevRight+8 PrevTop 
+										AUTO PrevHeight)
 END
 
 FORM ID DateBookForm AT (2 86 156 72)
@@ -121,7 +123,7 @@ BEGIN
     TITLE "About"
 
     LABEL "HDMaker" AUTOID AT (CENTER 20) FONT 2
-    LABEL "Version 0.7" AUTOID AT (Center PrevBottom)
+    LABEL "Version 0.8" AUTOID AT (Center PrevBottom)
 
     LABEL "Copyright(c) 2004" AUTOID AT (CENTER PrevBottom+5)
     LABEL "Jaemok Jeong" AUTOID AT (CENTER PrevBottom)
@@ -156,22 +158,22 @@ END
 
 ICONFAMILYEX
 BEGIN
-    BITMAP "icon-lg-1.bmp" BPP 1
-    BITMAP "icon-lg-2.bmp" BPP 2
-    BITMAP "icon-lg-8.bmp" BPP 8 TRANSPARENTINDEX 210 COMPRESS
-    BITMAP "icon-lg-1-d144.bmp" BPP 1 DENSITY 2
-    BITMAP "icon-lg-2-d144.bmp" BPP 2 DENSITY 2
-    BITMAP "icon-lg-8-d144.bmp" BPP 8 TRANSPARENTINDEX 210 COMPRESS DENSITY 2
+    BITMAP "25x22x2.bmp" BPP 1
+    BITMAP "25x22x4.bmp" BPP 2
+    BITMAP "25x22x8.bmp" BPP 8 TRANSPARENTINDEX 210 COMPRESS
+    BITMAP "50x44x2.bmp" BPP 1 DENSITY 2
+    BITMAP "50x44x4.bmp" BPP 2 DENSITY 2
+    BITMAP "50x44x8.bmp" BPP 8 TRANSPARENTINDEX 210 COMPRESS DENSITY 2
 END
 
 SMALLICONFAMILYEX
 BEGIN
-    BITMAP "icon-sm-1.bmp"  BPP 1
-    BITMAP "icon-sm-2.bmp"  BPP 2
-    BITMAP "icon-sm-8.bmp"  BPP 8 TRANSPARENTINDEX 210 COMPRESS
-    BITMAP "icon-sm-1-d144.bmp" BPP 1 DENSITY 2
-    BITMAP "icon-sm-2-d144.bmp" BPP 2 DENSITY 2
-    BITMAP "icon-sm-8-d144.bmp" BPP 8 TRANSPARENTINDEX 210 COMPRESS DENSITY 2
+    BITMAP "15x9x2.bmp"  BPP 1
+    BITMAP "15x9x4.bmp"  BPP 2
+    BITMAP "15x9x8.bmp"  BPP 8 TRANSPARENTINDEX 210 COMPRESS
+    BITMAP "30x18x2.bmp" BPP 1 DENSITY 2
+    BITMAP "30x18x4.bmp" BPP 2 DENSITY 2
+    BITMAP "30x18x8.bmp" BPP 8 TRANSPARENTINDEX 210 COMPRESS DENSITY 2
 END
 
 ALERT ID CleanupAlert CONFIRMATION
