@@ -1,0 +1,22 @@
+/* pilrc generated file.  Do not edit!*/
+#define HelpString 1033
+#define GeneratingHolidayAlert 1032
+#define ErrorAlert 1031
+#define PrefsOKButton 1030
+#define PrefsToField 1029
+#define PrefsFromField 1027
+#define PrefsCancelButton 1025
+#define PrefsForm 1024
+#define AboutOKButton 1023
+#define AboutOKButtons 1015
+#define AboutForm 1014
+#define MainGenerateButton 1013
+#define MainFieldScrollBar 1012
+#define MainField 1011
+#define MainForm 1010
+#define RomIncompatibleAlert 1009
+#define EditOnlyMenuBar 1007
+#define OptionsAboutHolidayDBMaker 1006
+#define OptionsHelp 1005
+#define OptionsPreferences 1003
+#define MainMenuBar 1001
