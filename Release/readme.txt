@@ -2,8 +2,8 @@
 
 * Overview
 
-This program generate HolidayDB.pdb file, which contains Holiday information. 
-Currently WeeklyPlan(http://wp.jmjeong.com) and 
+This program generates HolidayDB.pdb file, which contains Holiday information. 
+Currently WP+(http://wp.jmjeong.com) and 
 MonthPlanner(http://wiki.jmjeong.com/wiki.cgi?MonthPlanner) use this data.
 
 If the date is holiday, the background color is changed in these application.
@@ -23,7 +23,9 @@ If you are Palm program developer and want to use HolidayDB.pdb file,
 
 * General Rules
 
-** All lines staring with ';' are comment, You can add comment with ';' in any places of lines
+** All lines staring with ';' are comment, You can add comment with ';' in any
+places of lines.
+** Description string for Datebook notify is started with ':'.
 ** Each entry is divided with '\n'. You can enter one holiday entry in one line.
 ** You can specify the duration such as the day after or before holiday with '[' and ']'
   ex) 1/1[-1,0,1] ; A Day before New year, New Year, A Day after New Year.

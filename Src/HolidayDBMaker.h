@@ -21,7 +21,12 @@ typedef struct HolidayDBMakerPreferenceType
 {
 	Int16	from;
 	Int16	to;
-	Int16	offset;	// position
+	Int16	offset;	        // position
+    
+    UInt16   category;      // datebook category
+    
+    Int16   iconNumber;     // icon Number
+    Char    iconFormat;     // none, datebk5, agendus
 } HolidayDBMakerPreferenceType;
 
 typedef union 
@@ -51,6 +56,8 @@ typedef struct HolidayStruct
     
     Int16       duration_count;
     Int16       duration[10];
+
+    Char        description[81];
 } Holiday;
 
 
@@ -66,7 +73,7 @@ extern HolidayDBMakerPreferenceType g_prefs;
 
 #define appFileCreator			'HoLI'
 #define holiFileCreator         'Holi'
-#define appName					"HolidayDBMaker"
+#define appName					"HDMaker"
 #define appVersionNum			0x01
 #define appPrefID				0x00
 #define appPrefVersionNum		0x01

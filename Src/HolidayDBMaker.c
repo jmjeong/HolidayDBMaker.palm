@@ -14,6 +14,7 @@
 #include <PalmOSGlue.h>
 
 #include "HolidayDBMaker.h"
+#include "datebook.h"
 #include "HolidayDBMaker_Rsc.h"
 
 /*********************************************************************
@@ -26,8 +27,9 @@
 HolidayDBMakerPreferenceType g_prefs;
 DmOpenRef					 g_strDB;
 DmOpenRef					 g_HolidayDB;
+DmOpenRef                    DatebookDB;
 DateFormatType				 g_prefdfmts;
-
+Char                         gAppErrStr[255];
 
 /*********************************************************************
  * Internal Constants
@@ -40,6 +42,13 @@ DateFormatType				 g_prefdfmts;
 /*********************************************************************
  * Internal Functions
  *********************************************************************/
+static void CreateGenerateHoliday();
+static Boolean GenerateHoliday(Char *, Boolean);
+static int CleanupFromDB(DmOpenRef db);
+static Boolean IsHDMakerRecord(Char* description, Char* notefield);
+
+static char     HDMakerString[] = "* HDMaker";
+static Int16    MainFieldOffset = -1;
 
 /*
  * FUNCTION: GetObjectPtr
@@ -176,6 +185,20 @@ static void MainFormInit(FormType *frmP)
 	}
 }
 
+static void CleanupDatebookDB()
+{
+    SysCopyStringResource(gAppErrStr, RemoveConfirmString);
+    if (FrmCustomAlert(CleanupAlert, gAppErrStr, " ", " ") == 0) {
+        int ret;
+            
+        // do clean up processing
+        ret = CleanupFromDB(DatebookDB);
+        StrPrintF(gAppErrStr, "%d", ret);
+
+        FrmCustomAlert(CleanupDone, gAppErrStr, " ", " ");
+    }
+}
+
 /*
  * FUNCTION: MainFormDoCommand
  *
@@ -193,78 +216,96 @@ static Boolean MainFormDoCommand(UInt16 command)
 
 	switch (command)
 	{
-		case OptionsAboutHolidayDBMaker:
-		{
-			FormType * frmP;
+    case OptionsGenerate:
+    {
+        CreateGenerateHoliday();
+        handled = true;
+        break;
+    }
+    case OptionsNotifyDatebook:
+    {
+        FrmGotoForm(DateBookForm);
+        handled = true;
+        break;
+    }
+    case OptionsCleanupDatebook:
+    {
+        CleanupDatebookDB();
+        
+        handled = true;
+        break;
+    }
+    case OptionsAboutHolidayDBMaker:
+    {
+        FormType * frmP;
 
-			/* Clear the menu status from the display */
-			MenuEraseStatus(0);
+        /* Clear the menu status from the display */
+        MenuEraseStatus(0);
 
-			/* Display the About Box. */
-			frmP = FrmInitForm (AboutForm);
-			FrmDoDialog (frmP);                    
-			FrmDeleteForm (frmP);
+        /* Display the About Box. */
+        frmP = FrmInitForm (AboutForm);
+        FrmDoDialog (frmP);                    
+        FrmDeleteForm (frmP);
 
-			handled = true;
-			break;
-		}
-		case OptionsHelp:
-		{
-			FrmHelp(HelpString);
-			handled = true;
-			break;
-		}
-		case OptionsPreferences:
-		{
-			FormType * frmP;
-			ControlType * cbox = NULL;
-			FieldType * field = NULL;			
-			UInt16 controlID = 0;
-			MemHandle handle = 0;
-			char temp[50];
-			FieldPtr fromField, toField;
+        handled = true;
+        break;
+    }
+    case OptionsHelp:
+    {
+        FrmHelp(HelpString);
+        handled = true;
+        break;
+    }
+    case OptionsPreferences:
+    {
+        FormType * frmP;
+        ControlType * cbox = NULL;
+        FieldType * field = NULL;			
+        UInt16 controlID = 0;
+        MemHandle handle = 0;
+        char temp[50];
+        FieldPtr fromField, toField;
 
-			/* Clear the menu status from the display */
-			MenuEraseStatus(0);
+        /* Clear the menu status from the display */
+        MenuEraseStatus(0);
 
-			/* Initialize the preference form. */
-			frmP = FrmInitForm (PrefsForm);
+        /* Initialize the preference form. */
+        frmP = FrmInitForm (PrefsForm);
 			
-			fromField = FrmGetObjectPtr(FrmGetFormPtr(PrefsForm), 
-					FrmGetObjectIndex(FrmGetFormPtr(PrefsForm), PrefsFromField));
+        fromField = FrmGetObjectPtr(FrmGetFormPtr(PrefsForm), 
+                                    FrmGetObjectIndex(FrmGetFormPtr(PrefsForm), PrefsFromField));
 					
-			toField = FrmGetObjectPtr(FrmGetFormPtr(PrefsForm), 
-					FrmGetObjectIndex(FrmGetFormPtr(PrefsForm), PrefsToField));
+        toField = FrmGetObjectPtr(FrmGetFormPtr(PrefsForm), 
+                                  FrmGetObjectIndex(FrmGetFormPtr(PrefsForm), PrefsToField));
 										
-			StrPrintF(temp, "%d", g_prefs.from);
-			SetFieldTextFromStr(fromField, temp);
+        StrPrintF(temp, "%d", g_prefs.from);
+        SetFieldTextFromStr(fromField, temp);
 			
-			StrPrintF(temp, "%d", g_prefs.to);
-			SetFieldTextFromStr(toField, temp);
+        StrPrintF(temp, "%d", g_prefs.to);
+        SetFieldTextFromStr(toField, temp);
 			
-			controlID = FrmDoDialog (frmP);
+        controlID = FrmDoDialog (frmP);
 			
-			/* controlID contains the ID of the button used to dismiss the dialog */
-			if (controlID == PrefsOKButton)
-			{				
-				if (FldDirty(fromField)) {
-					char *p = FldGetTextPtr(fromField);
-					g_prefs.from = StrAToI(p);
-				}
+        /* controlID contains the ID of the button used to dismiss the dialog */
+        if (controlID == PrefsOKButton)
+        {				
+            if (FldDirty(fromField)) {
+                char *p = FldGetTextPtr(fromField);
+                g_prefs.from = StrAToI(p);
+            }
 	
-				if (FldDirty(toField)) {
-					char *p = FldGetTextPtr(toField);
-					g_prefs.to = StrAToI(p);
-				}
-			}
+            if (FldDirty(toField)) {
+                char *p = FldGetTextPtr(toField);
+                g_prefs.to = StrAToI(p);
+            }
+        }
 			
-			/* Clean up */
-			FrmDeleteForm (frmP);
+        /* Clean up */
+        FrmDeleteForm (frmP);
 
-			handled = true;
-			break;
-		}
-
+        handled = true;
+        break;
+    }
 	}
 
 	return handled;
@@ -351,6 +392,57 @@ static void CleanupHoliday(DmOpenRef dbP)
     }
 }
 
+static Boolean IsHDMakerRecord(Char* description, Char* notefield)
+{
+/*
+  if (StrStr(description, "(대한민국)")) return true;
+  else return false;
+*/
+    if (notefield && StrStr(notefield, HDMakerString)) {
+        return true; 
+    }
+    else return false;
+}
+
+static int CleanupFromDB(DmOpenRef db)
+{
+    UInt16 currIndex = 0;
+    MemHandle recordH;
+    ApptDBRecordType apptRecord;
+    int ret = 0;
+    Int16   i = 0;
+    
+    while (1) {
+        recordH = DmQueryNextInCategory(db, &currIndex,
+                                        dmAllCategories);
+        if (!recordH) break;
+        i++;
+
+        if (i % 50 == 0) {
+            // Reset the auto-off timer to make sure we don't
+            // fall asleep in the
+            //  middle of the update
+            EvtResetAutoOffTimer ();
+        }
+
+        ApptGetRecord(db, currIndex, &apptRecord, &recordH);
+        if (IsHDMakerRecord(apptRecord.description, apptRecord.note)) {
+            // if it is happydays record?
+            //
+            ret++;
+            // remove the record
+            DmDeleteRecord(db, currIndex);
+            // deleted records are stored at the end of the database
+            //
+            DmMoveRecord(db, currIndex, DmNumRecords(DatebookDB));
+        }
+        else {
+            MemHandleUnlock(recordH);
+            currIndex++;
+        }
+    }
+    return ret;
+}
 
 static Int16 CreateHolidayDB()
 {
@@ -428,7 +520,7 @@ static Int16 HolidayNewRecord(DmOpenRef dbP, DateType *r, UInt16 *index)
     return err;
 }
 
-static void MakeActualNewHolidayRecord(UInt16 day, UInt16 month, UInt16 year, Holiday hd)
+static Boolean MakeActualNewHolidayRecord(UInt16 day, UInt16 month, UInt16 year, Holiday hd)
 {
     DateType r, *ptr;
     UInt16 index;
@@ -452,15 +544,144 @@ static void MakeActualNewHolidayRecord(UInt16 day, UInt16 month, UInt16 year, Ho
     }
     if (!found)
         HolidayNewRecord(g_HolidayDB, &r, &index);
+
+    return !found;
 }
 
-static void MakeNewHolidayRecord(UInt16 day, UInt16 month, UInt16 year, Holiday hd)
+static Boolean IsSameRecord(Char *description, Char* notefield, Holiday hd)
 {
-    Int16 i;
-    DateType temp;
+    Char *p;
     
-    if (hd.duration_count == 0) 
-        MakeActualNewHolidayRecord(day, month, year, hd);
+    if (notefield && description &&
+        (p = StrStr(notefield,HDMakerString)) && StrCompare(description, hd.description) ==0) return true;
+    else return false;
+}
+
+static Int16 CheckDatebookRecord(DateType when, Holiday hd)
+{
+    UInt16 numAppoints = 0;
+    MemHandle apptListH;
+    ApptDBRecordType dbRecord;
+    ApptInfoPtr apptList;
+    UInt16 recordNum;
+    MemHandle recordH;
+    Int16 i;
+
+    // check the exisiting records
+    //
+    apptListH = ApptGetAppointments(DatebookDB, when, &numAppoints);
+    if (apptListH) {
+        apptList = MemHandleLock(apptListH);
+        for (i = 0; i < numAppoints; i++) {
+            ApptGetRecord(DatebookDB, apptList[i].recordNum,
+                          &dbRecord, &recordH);
+            // if matched one is exists, return recordNum;
+            //
+            if (recordH) {
+                if (IsSameRecord(dbRecord.description, dbRecord.note, hd)) {
+                    recordNum = apptList[i].recordNum;
+                    
+                    MemHandleUnlock(recordH);
+                    MemHandleUnlock(apptListH);
+                    MemHandleFree(apptListH);
+
+                    return recordNum;
+                }
+                else MemHandleUnlock(recordH);
+            }
+        }
+        MemHandleUnlock(apptListH);
+        MemHandleFree(apptListH);
+    }
+    return -1;
+}
+
+static void SetCategory(DmOpenRef dbP, UInt16 index, UInt16 category)
+{
+    UInt16                  attr;
+    
+    // Set the category.
+    DmRecordInfo (dbP, index, &attr, NULL, NULL);
+    attr &= ~dmRecAttrCategoryMask;
+    attr |= category;
+    DmSetRecordInfo (dbP, index, &attr, NULL);
+}
+
+static Boolean MakeNotifyDBRecord(UInt16 day, UInt16 month, UInt16 year, Holiday hd)
+{
+    ApptDBRecordType datebook;
+    ApptDateTimeType dbwhen;
+    AlarmInfoType dbalarm;
+    Int16 existIndex;
+    DateType when;
+
+    if (!hd.description[0]) return false;
+
+    when.day = day;
+    when.month = month;
+    when.year = year - firstYear;
+
+    // for the performance, check this first 
+    existIndex = CheckDatebookRecord(when, hd);
+
+    /* Zero the memory */
+    MemSet(&datebook, sizeof(ApptDBRecordType), 0);
+    MemSet(&dbwhen, sizeof(ApptDateTimeType), 0);
+    MemSet(&dbalarm, sizeof(AlarmInfoType), 0);
+    datebook.when = &dbwhen;
+    datebook.alarm = &dbalarm;
+
+    // set the date and time
+    //
+    dbwhen.date = when;
+    TimeToInt(dbwhen.startTime) = TimeToInt(dbwhen.endTime) = -1;
+
+    dbalarm.advance = apptNoAlarm;
+    datebook.alarm = NULL;
+
+    // set the repeat
+    //
+    datebook.repeat = NULL;
+
+    // forget the exceptions 
+    //
+    datebook.exceptions = NULL;
+    datebook.note = HDMakerString;
+
+    // make the description
+    datebook.description = hd.description;
+
+    if (existIndex < 0) {            // there is no same record
+        //
+        // if not exists
+        // write the new record (be sure to fill index)
+        //
+        ApptNewRecord(DatebookDB, &datebook, (UInt16 *)&existIndex);
+        SetCategory(DatebookDB, existIndex, g_prefs.category);
+        return true;
+    }
+    else {                                      // if exists
+        SetCategory(DatebookDB, existIndex, g_prefs.category);
+        return false;
+    }
+}
+
+static Int16 MakeNewHolidayRecord(UInt16 day, UInt16 month, UInt16 year, Holiday hd, Boolean hddb)
+{
+    Int16       i;
+    DateType    temp;
+    Int16       count = 0;
+    Boolean     made;
+    
+    if (hd.duration_count == 0) {
+        if (hddb) {
+            made = MakeActualNewHolidayRecord(day, month, year, hd);   
+        }
+        else {
+            made = MakeNotifyDBRecord(day, month, year, hd);
+        }
+        if (made) count++;
+    }
     else {
         for (i = 0; i < hd.duration_count; i++) {
             temp.day = day;
@@ -469,9 +690,16 @@ static void MakeNewHolidayRecord(UInt16 day, UInt16 month, UInt16 year, Holiday 
 
             DateAdjust(&temp, hd.duration[i]);
 
-            MakeActualNewHolidayRecord(temp.day, temp.month, temp.year+firstYear, hd);
+            if (hddb) {
+                made = MakeActualNewHolidayRecord(temp.day, temp.month, temp.year+firstYear, hd);
+            }
+            else {
+                made = MakeNotifyDBRecord(temp.day, temp.month, temp.year+firstYear, hd);
+            }
+            if (made) count++;
         }
     }
+    return count;
 }
 
 static Int16 AnalOneRecord(char* src, Holiday* hd)
@@ -484,13 +712,24 @@ static Int16 AnalOneRecord(char* src, Holiday* hd)
 
     hd->flag.allBits = 0;
     hd->duration_count = 0;
+    hd->description[0] = 0;
     
     while (*src == ' ' || *src == '\t') src++;
 
     if (*src == ';') return true;
 
     // ; 이 있으면 그 담은 무시
+    //
     if ((q = StrChr(src, ';'))) *q = 0;
+
+    // description이 있는 경우 description 처리
+    //
+    if ((q = StrChr(src, ':'))) {
+        q++;
+        while (*q == ' ' || *q == '\t')
+            q++;
+        StrNCopy(hd->description, q, 80);
+    }
 
     if ((q = StrChr(src, '['))) {
         // [ 이 있는 경우 duration으로 판단 
@@ -707,10 +946,11 @@ static void CalcHoliday(Int16 *day, Int16 month, Int16 year, Int8 dayOfWeek, Int
     return;
 }
 
-static void ProcessCalcHoliday(Holiday hd)
+static Int16 ProcessCalcHoliday(Holiday hd, Boolean hddb)
 {
     Int16 i;
     Int16 day, month, year;
+    Int16 count = 0;
 
     month = hd.month;
     
@@ -718,16 +958,17 @@ static void ProcessCalcHoliday(Holiday hd)
         year = hd.year;
 
         CalcHoliday(&day, month, year, hd.dayOfWeek, hd.weekOfMonth);
-        MakeNewHolidayRecord(day, month, year, hd);
+        count += MakeNewHolidayRecord(day, month, year, hd, hddb);
     }
     else {
         for (i = g_prefs.from; i <= g_prefs.to; i++) {
             year = i;
             
             CalcHoliday(&day, month, year, hd.dayOfWeek, hd.weekOfMonth);
-            MakeNewHolidayRecord(day, month, year, hd);
+            count += MakeNewHolidayRecord(day, month, year, hd, hddb);
         }
     }
+    return count;
 }
 
 static void CalcEaster(Int16 *day, Int16 *month, Int16 year)
@@ -751,48 +992,82 @@ static void CalcEaster(Int16 *day, Int16 *month, Int16 year)
     *day = p + 1;
 }
 
-static void ProcessEaster(Holiday hd)
+static Int16 ProcessEaster(Holiday hd, Boolean hddb)
 {
     Int16 day, month, year, i;
+    Int16 count = 0;
     
     if (hd.flag.bits.year) {
         year = hd.year;
 
         CalcEaster(&day, &month, year);
-        MakeNewHolidayRecord(day, month, year, hd);
+        count += MakeNewHolidayRecord(day, month, year, hd, hddb);
     }
     else {
         for (i = g_prefs.from; i <= g_prefs.to; i++) {
             year = i;
             
             CalcEaster(&day, &month, year);
-            MakeNewHolidayRecord(day, month, year, hd);
+            count += MakeNewHolidayRecord(day, month, year, hd, hddb);
         }
+    }
+    return count;
+}
+
+static void CreateGenerateHoliday()
+{
+    char *field = FldGetTextPtr(GetObjectPtr(MainField));
+	if (!field) return;
+    
+    CreateHolidayDB();
+    GenerateHoliday(field, true);
+    CloseHolidayDB();
+
+    if (MainFieldOffset >= 0) {
+        // 에러인 경우 표시 목적
+        FldSetInsPtPosition(GetObjectPtr(MainField), MainFieldOffset);
+        UpdateScrollBar();
     }
 }
 
-static void MakeNewEntry(Holiday hd)
+static void NotifyDatebookDB()
+{
+    MemHandle recordH;
+	Char* ptr;
+
+	recordH = DmQueryRecord(g_strDB, 0);
+	if (recordH) {
+		ptr = MemHandleLock(recordH);
+
+        // datebook 에다 notify
+        GenerateHoliday(ptr, false);
+		MemHandleUnlock(recordH);
+	}
+}
+
+static Int16 MakeNewEntry(Holiday hd, Boolean hddb)
 {
     Int16 i;
+    Int16 count = 0;
 
     if (hd.flag.bits.dayofmonth) {
-        ProcessCalcHoliday(hd);
+        count += ProcessCalcHoliday(hd, hddb);
     }
     else if (hd.flag.bits.easter) {
-        ProcessEaster(hd);
+        count += ProcessEaster(hd, hddb);
     }
     else if (hd.flag.bits.solar) {
         if (hd.flag.bits.year) {
             if (hd.day <= DaysInMonth(hd.month, hd.year)) {
                 // if exists
-                MakeNewHolidayRecord(hd.day, hd.month, hd.year, hd);
+                count += MakeNewHolidayRecord(hd.day, hd.month, hd.year, hd, hddb);
             }
         }
         else {
             for (i = g_prefs.from; i <= g_prefs.to; i++) {
-                if (hd.day <= DaysInMonth(hd.month, hd.year)) {
+                if (hd.day <= DaysInMonth(hd.month, i)) {
                     // if exists
-                    MakeNewHolidayRecord(hd.day, hd.month, i, hd);
+                    count += MakeNewHolidayRecord(hd.day, hd.month, i, hd, hddb);
                 }
             }
         }
@@ -807,7 +1082,7 @@ static void MakeNewEntry(Holiday hd)
         if (hd.flag.bits.year) {
         	dt = r;
             if (FindNearLunar(&dt, r, hd.flag.bits.lunar_leap)) {
-                MakeNewHolidayRecord(dt.day, dt.month, dt.year + firstYear, hd);
+                count += MakeNewHolidayRecord(dt.day, dt.month, dt.year + firstYear, hd, hddb);
             }
         }
         else {
@@ -816,23 +1091,23 @@ static void MakeNewEntry(Holiday hd)
                 r.year = i - firstYear;
         		dt = r;                
                 if (FindNearLunar(&dt, r, hd.flag.bits.lunar_leap)) {
-                    MakeNewHolidayRecord(dt.day, dt.month, dt.year + firstYear, hd);
+                    count += MakeNewHolidayRecord(dt.day, dt.month, dt.year + firstYear, hd, hddb);
                 }
             }
         }
     }
+    return count;
 }
 
-static Boolean GenerateHoliday()
+static Boolean GenerateHoliday(Char* field, Boolean hddb)
 {
     char *p, *q;
-    char *field = FldGetTextPtr(GetObjectPtr(MainField));
     char *str;
     Boolean ret = true;
     Int16   line = 0;
+    Int16   count = 0;
     Holiday hd;
 
-	if (!field) return true;
  	str = MemPtrNew(StrLen(field)+1);
  	
     p = str;
@@ -842,13 +1117,18 @@ static Boolean GenerateHoliday()
         *q = 0;
 
         line++;
-        
         if (!AnalOneRecord(p, &hd)) {
             ret = false;
             break;
         }
-        else MakeNewEntry(hd);
-        
+        else count += MakeNewEntry(hd, hddb);
+
+        if ((line+1) % 10 == 0) {
+            // Reset the auto-off timer to make sure we don't
+            // fall asleep in the
+            //  middle of the update
+            EvtResetAutoOffTimer ();
+        }
         p = q+1;
     }
     if (*p && ret) {
@@ -856,28 +1136,92 @@ static Boolean GenerateHoliday()
         if (!AnalOneRecord(p, &hd)) {
             ret = false;
         }
-        else MakeNewEntry(hd);
+        else count += MakeNewEntry(hd, hddb);
     }
     
     if (!ret) {
         // 에러가 난 행을 표시해 줌
         char temp[255];
         StrPrintF(temp, "Error in line %d", line);
-        
         FrmCustomAlert(ErrorAlert, temp, "", "");
-        FldSetInsPtPosition(GetObjectPtr(MainField), p - str);
-        UpdateScrollBar();
+
+        MainFieldOffset = p - str;
     }
     else {
-        FrmAlert(GeneratingHolidayAlert);
+        StrPrintF(gAppErrStr, "%d", count);
         
+        if (hddb) {
+            FrmCustomAlert(GeneratingHolidayAlert, gAppErrStr, " ", " ");
+        }
+        else {
+            FrmCustomAlert(GeneratingDatebookAlert, gAppErrStr, " ", " ");
+        }
+        MainFieldOffset = -1;
     }
-
     MemPtrFree(str);
     
     return ret;
 }
 
+static void DatebookFormInit(FormType *frmP)
+{
+	Char* label;
+	ControlPtr ctl;
+    
+    // Set the label of the category trigger.
+	ctl = GetObjectPtr (DateBookPopupTrigger);
+	label = (Char *)CtlGetLabel (ctl);
+	
+	CategoryGetName (DatebookDB, g_prefs.category, label);
+	CategorySetTriggerLabel(ctl, label);
+}
+
+static Boolean DatebookSelectCategory (UInt16* category)
+{
+	Char* name;
+	Boolean categoryEdited;
+	
+	name = (Char *)CtlGetLabel (GetObjectPtr (DateBookPopupTrigger));
+
+	categoryEdited = CategorySelect (DatebookDB, FrmGetActiveForm (),
+                                     DateBookPopupTrigger, DateBookCategory,
+                                     false, category, name, 1, EditCategoryString);
+	return (categoryEdited);
+}
+
+
+static Boolean DateBookFormHandleEvent(EventType * eventP)
+{
+	Boolean handled = false;
+	FormType * frmP = FrmGetActiveForm();;
+
+	switch (eventP->eType) 
+	{
+		case frmOpenEvent:
+			DatebookFormInit(frmP);
+			FrmDrawForm(frmP);
+			handled = true;
+			break;
+            
+		case ctlSelectEvent:
+		{
+            switch (eventP->data.ctlSelect.controlID) {
+            case DateBookFormOk:
+                NotifyDatebookDB();
+            case DateBookFormCancel:
+                FrmGotoForm(MainForm);
+                handled = true;
+                break;
+            case DateBookPopupTrigger:
+                DatebookSelectCategory(&g_prefs.category);
+                handled = true;
+                break;
+            }
+			break;
+		}
+	}
+	return handled;
+}
 
 /*
  * FUNCTION: MainFormHandleEvent
@@ -904,70 +1248,81 @@ static Boolean MainFormHandleEvent(EventType * eventP)
 
 	switch (eventP->eType) 
 	{
-		case menuEvent:
-			return MainFormDoCommand(eventP->data.menu.itemID);
+    case menuEvent:
+        return MainFormDoCommand(eventP->data.menu.itemID);
 
-		case frmOpenEvent:
-			frmP = FrmGetActiveForm();
-			MainFormInit(frmP);
-			if (g_prefs.offset >= 0) {
-				FldSetInsPtPosition(GetObjectPtr(MainField), g_prefs.offset);
-			}					
-			FrmDrawForm(frmP);
-			FrmSetFocus(frmP, FrmGetObjectIndex(frmP, MainField));
-			UpdateScrollBar();
+    case frmOpenEvent:
+        frmP = FrmGetActiveForm();
+        MainFormInit(frmP);
+        
+        if (MainFieldOffset >= 0) {
+            // 에러인 경우 표시 목적
+            FldSetInsPtPosition(GetObjectPtr(MainField), MainFieldOffset);
+        }
+        else if (g_prefs.offset >= 0) {
+            FldSetInsPtPosition(GetObjectPtr(MainField), g_prefs.offset);
+        }					
+        FrmDrawForm(frmP);
+        FrmSetFocus(frmP, FrmGetObjectIndex(frmP, MainField));
+        UpdateScrollBar();
 	
-			handled = true;
-			break;
+        handled = true;
+        break;
             
-        case frmUpdateEvent:
-			/* 
-			 * To do any custom drawing here, first call
-			 * FrmDrawForm(), then do your drawing, and
-			 * then set handled to true. 
-			 */
-			break;
+    case frmUpdateEvent:
+        /* 
+         * To do any custom drawing here, first call
+         * FrmDrawForm(), then do your drawing, and
+         * then set handled to true. 
+         */
+        break;
 			
-		case ctlSelectEvent:
-		{
-			if (eventP->data.ctlSelect.controlID == MainGenerateButton)
-			{
-                CreateHolidayDB();
-				GenerateHoliday();
-                CloseHolidayDB();
-				break;
-			}
+    case ctlSelectEvent:
+    {
+        switch (eventP->data.ctlSelect.controlID) {
+        case MainGenerateButton:
+            CreateGenerateHoliday();
+            handled = true;
+            break;
+        case MainDBNotifyButton:
+            FrmGotoForm(DateBookForm);
+            handled = true;
+            break;
+        case MainDBCleanupButton:
+            CleanupDatebookDB();
+            handled = true;
+            break;
+        }
+    }
+    case fldChangedEvent:
+    {
+        UpdateScrollBar();
+        handled = true;
 
-			break;
-		}
-		case fldChangedEvent:
-		{
-		   	UpdateScrollBar();
-        	handled = true;
-
-			break;
-		}
-    	case sclRepeatEvent:
-    	{
-       		ScrollLines(eventP->data.sclRepeat.newValue -
+        break;
+    }
+    case sclRepeatEvent:
+    {
+        ScrollLines(eventP->data.sclRepeat.newValue -
                     eventP->data.sclRepeat.value, false);
-	        break;
-	   	}
+        break;
+    }
 	   	
-    	case keyDownEvent:
-	        if (eventP->data.keyDown.chr == pageUpChr) {
-	            PageScroll(winUp);
-	            handled = true;
-	        } else if (eventP->data.keyDown.chr == pageDownChr) {
-	            PageScroll(winDown);
-	            handled = true;
-	        }
-	        break;
-		case appStopEvent:
-			SaveFieldDataToDB();
+    case keyDownEvent:
+        if (eventP->data.keyDown.chr == pageUpChr) {
+            PageScroll(winUp);
+            handled = true;
+        } else if (eventP->data.keyDown.chr == pageDownChr) {
+            PageScroll(winDown);
+            handled = true;
+        }
+        break;
+    case frmCloseEvent:
+    case appStopEvent:
+        SaveFieldDataToDB();
 		
-			// handled = true;	
-			break;        
+        // handled = true;	
+        break;        
 	}
     
 	return handled;
@@ -1010,10 +1365,12 @@ static Boolean AppHandleEvent(EventType * eventP)
 		 */
 		switch (formId)
 		{
-			case MainForm:
-				FrmSetEventHandler(frmP, MainFormHandleEvent);
-				break;
-
+        case MainForm:
+            FrmSetEventHandler(frmP, MainFormHandleEvent);
+            break;
+        case DateBookForm:
+            FrmSetEventHandler(frmP, DateBookFormHandleEvent);
+            break;
 		}
 		return true;
 	}
@@ -1064,6 +1421,7 @@ static Err AppStart(void)
 	UInt16 prefsSize;
 	UInt16 mode = dmModeReadWrite;
 	SystemPreferencesType sysPrefs;
+    char ForDateBookCategoryCheck[dmCategoryLength];
 	
 	/* Read the saved preferences / saved-state information. */
 	prefsSize = sizeof(g_prefs);
@@ -1073,8 +1431,12 @@ static Err AppStart(void)
 	{
 		/* no prefs; initialize pref struct with default values */
 		g_prefs.from = 2003;
-		g_prefs.to = 2006;
+		g_prefs.to = 2010;
 		g_prefs.offset = -1;
+
+        g_prefs.category = 0;
+        g_prefs.iconNumber = -1;
+        g_prefs.iconFormat = 0;
 	}
 	
 	PrefGetPreferences(&sysPrefs);
@@ -1088,6 +1450,19 @@ static Err AppStart(void)
 		g_strDB = DmOpenDatabaseByTypeCreator('Temp', appFileCreator, mode);
 	
 	}
+    mode |= dmModeShowSecret;
+    DatebookDB = DmOpenDatabaseByTypeCreator('DATA', 'date',
+                                             mode | dmModeReadWrite);
+    if (!DatebookDB) {
+        SysCopyStringResource(gAppErrStr, DateBookFirstAlertString);
+        FrmCustomAlert(ErrorAlert, gAppErrStr, " ", " ");
+        return -1;
+    }
+	//Prepare DateBook AppInfoBlock
+	//if Needed
+	CategoryGetName(DatebookDB, 0, ForDateBookCategoryCheck);
+	if (!*ForDateBookCategoryCheck) CategorySetName(DatebookDB,0,"Unfiled");
+    
 	
 	return errNone;
 }
@@ -1108,7 +1483,8 @@ static void AppStop(void)
 		appFileCreator, appPrefID, appPrefVersionNum, 
 		&g_prefs, sizeof(g_prefs), true);
 		
-	DmCloseDatabase(g_strDB);		
+	DmCloseDatabase(g_strDB);
+    DmCloseDatabase(DatebookDB);
         
 	/* Close all the open forms. */
 	FrmCloseAllForms();

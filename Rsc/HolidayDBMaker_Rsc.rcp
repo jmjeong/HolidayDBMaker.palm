@@ -9,6 +9,13 @@ RESETAUTOID 1000
 
 MENU ID MainMenuBar
 BEGIN
+    PULLDOWN "Utility"
+    BEGIN
+        MENUITEM "Generate HolidayDB"  ID OptionsGenerate "H"
+        MENUITEM SEPARATOR
+        MENUITEM "DateBook Notify"  ID OptionsNotifyDatebook  "D"
+        MENUITEM "Cleanup DateBook" ID OptionsCleanupDatebook "C"
+    END
     PULLDOWN "Edit"
     BEGIN
         MENUITEM "Undo" ID 10000 "U"
@@ -24,15 +31,13 @@ BEGIN
     PULLDOWN "Options"
     BEGIN
         MENUITEM "Preferences..." ID OptionsPreferences "R"
-        		
-MENUITEM SEPARATOR
-		MENUITEM "Help" ID OptionsHelp  
-MENUITEM "About" ID OptionsAboutHolidayDBMaker
-	
+        MENUITEM SEPARATOR
+		MENUITEM "Help" ID OptionsHelp  "H"
+        MENUITEM "About" ID OptionsAboutHolidayDBMaker "A"
+    END
 END
 
-END
-
+/*
 MENU ID EditOnlyMenuBar
 BEGIN
     PULLDOWN "Edit"
@@ -47,6 +52,7 @@ BEGIN
         MENUITEM "Graffiti Help" ID 10007 "G"
     END
 END
+*/
 
 ALERT ID RomIncompatibleAlert
     DEFAULTBUTTON 0
@@ -61,7 +67,7 @@ FORM ID MainForm AT (0 0 160 160)
     NOSAVEBEHIND NOFRAME
     MENUID MainMenuBar
 BEGIN
-    TITLE "HolidayDBMaker"
+    TITLE "HDMaker"
     GRAFFITISTATEINDICATOR AT (149 148)
     FIELD ID MainField  AT (0 16 151 126)
         MULTIPLELINES
@@ -69,8 +75,43 @@ BEGIN
         UNDERLINED
         MAXCHARS 1024*32 HASSCROLLBAR
     SCROLLBAR MainFieldScrollBar AT (PrevRight+2 PrevTop 7 PrevHeight) USABLE VALUE 0 MIN 0 MAX 0 PAGESIZE 0
-    BUTTON "Generate" ID MainGenerateButton  AT (1 147 AUTO 12)
+    BUTTON "HoliDB" ID MainGenerateButton  AT (1 147 AUTO 12)
+    BUTTON "DateBook" ID MainDBNotifyButton AT (PrevRight+8 PrevTop AUTO PrevHeight)
+    BUTTON "Cleanup" ID MainDBCleanupButton AT (PrevRight+4 PrevTop AUTO PrevHeight)
+END
 
+FORM ID DateBookForm AT (2 86 156 72)
+FRAME
+MODAL
+USABLE
+HELPID DateBookFormHelpString
+DEFAULTBTNID DateBookNotifyFormCancel
+BEGIN
+    TITLE "DateBook Notify"
+    
+	LABEL "Category:" AUTOID AT (Right@60 22) FONT 1
+    POPUPTRIGGER "                 " ID DateBookPopupTrigger
+            AT ( PrevRight+5 PrevTop AUTO AUTO ) LeftAnchor 
+	LIST "" ID DateBookCategory AT ( PrevLeft PrevTop 70 AUTO ) 
+		NONUSABLE 
+    POPUPLIST ID DateBookPopupTrigger DateBookNotifyCategory
+
+/*        
+	LABEL "Icon:" AUTOID AT (Right@60 PrevBottom+5) FONT 1
+    SELECTORTRIGGER "" ID DateBookIcon at (PrevRight+5 PrevTop
+                12 12) LEFTANCHOR FONT 0
+	LABEL "Format:" AUTOID AT (Right@60 PrevBottom+3) FONT 1
+    PUSHBUTTON "None" ID DatebookFormIconNone AT
+		(PrevRight+5  PrevTop AUTO AUTO) GROUP 1
+    PUSHBUTTON "AN" ID DatebookFormAgendus AT 
+		(PrevRight+1 PrevTop AUTO AUTO) GROUP 1
+    PUSHBUTTON "DBk5" ID DatebookFormDateBk5 AT 
+		(PrevRight+1 PrevTop AUTO AUTO) GROUP 1
+*/
+
+    BUTTON "OK" ID DateBookFormOk AT (5 Bottom@66 40 AUTO)
+    BUTTON "Cancel" ID DateBookFormCancel AT (PrevRight+5 PrevTop 40 AUTO)
+	GRAFFITISTATEINDICATOR AT (PrevRight+5 PrevTop)
 END
 
 FORM ID AboutForm AT (2 2 156 156)
@@ -79,8 +120,8 @@ FORM ID AboutForm AT (2 2 156 156)
 BEGIN
     TITLE "About"
 
-    LABEL "HolidayDBMaker" AUTOID AT (CENTER 20) FONT 2
-    LABEL "Version 0.6" AUTOID AT (Center PrevBottom)
+    LABEL "HDMaker" AUTOID AT (CENTER 20) FONT 2
+    LABEL "Version 0.7" AUTOID AT (Center PrevBottom)
 
     LABEL "Copyright(c) 2004" AUTOID AT (CENTER PrevBottom+5)
     LABEL "Jaemok Jeong" AUTOID AT (CENTER PrevBottom)
@@ -92,6 +133,7 @@ BEGIN
     BUTTON "OK" ID AboutOKButton AT (58 133 40 12)
 
 END
+
 
 FORM ID PrefsForm AT (2 78 156 80)
     SAVEBEHIND MODAL
@@ -132,6 +174,21 @@ BEGIN
     BITMAP "icon-sm-8-d144.bmp" BPP 8 TRANSPARENTINDEX 210 COMPRESS DENSITY 2
 END
 
+ALERT ID CleanupAlert CONFIRMATION
+HELPID CleanupAlertHelpString
+DEFAULTBUTTON 1
+BEGIN
+    TITLE "Datebook Cleanup"
+    MESSAGE "Datebook: ^1"
+    BUTTONS "OK" "Cancel"
+END
+
+ALERT ID CleanupDone INFORMATION
+BEGIN
+    TITLE "Cleanup Done"
+    MESSAGE "Datebook: ^1 entries are removed."
+    BUTTONS "OK"
+END
 
 ALERT ID ErrorAlert
 BEGIN
@@ -143,14 +200,41 @@ END
 ALERT ID GeneratingHolidayAlert
 BEGIN
      TITLE "Information"
-     MESSAGE "Generating HolidayDB is Completed"
+     MESSAGE "Generating HolidayDB(^1 records) is Completed"
      BUTTONS "OK"
 END
 
+ALERT ID GeneratingDatebookAlert
+BEGIN
+     TITLE "Information"
+     MESSAGE "Notifying to Datebook(^1 records) is Completed"
+     BUTTONS "OK"
+END
+
+STRING ID EditCategoryString        "Edit Categories..."
+
+STRING ID DateBookFirstAlertString  "Please run Date Book once first."
+
+STRING ID RemoveConfirmString \
+    "Are you sure you want to remove all "\
+    "HDMaker notify entries?"
+
+STRING ID CleanupAlertHelpString \
+        "Notification entries are considered HDMaker if they have "\
+	    "{*HDMaker} in their memo field. "\ 	
+        "If you use this format in your own "\
+        "entries, this record might also be removed by CleanUp.\n"
+
+STRING ID DateBookFormHelpString \
+"Category : Datebook category\n\n"
+// "Icon Format : Specify which application is used for viewing Icon"
+
 STRING ID HelpString \
-"This application generates HolidayDB.pdb, which contains National Holiday information used for WeeklyPlan or MonthPlanner.\n\n"\
+"HDMaker generates HolidayDB.pdb, "\
+"which contains National Holiday information used for WP+ or MonthPlanner.\n\n"\
 "- All lines staring with \';\' are comment.\n"\
-"- Each entry is devided with \'\\n\'\n"\
+"- Description starts with \':\'\n"\
+"- Each entry is divided with \'\\n\'\n"\
 "- You can specify the duration such as the day after or before holiday with \'[\' and \']\'\n"\
 "- If year field is specified, it only occurs on that year. Or it is repeated on the years specified in Prefs\n\n"\
 "== Format\n\n"\
@@ -165,4 +249,5 @@ STRING ID HelpString \
 "ex)\n@c(2,3,1) ; Third Monday in Feb\n\n"\
 "* Easter Related\n"\
 "  @easter\n  @easter(year)\n\n"\
-"ex)\n@easter[4] ; Four days after Easter Sunday\n"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+"ex)\n@easter[4] ; Four days after Easter Sunday\n\n"
+

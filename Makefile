@@ -1,8 +1,8 @@
 ## Makefile for subway
 
-upload: Release/HolidayDBMaker.prc
-	zip -r HolidayDBMaker.zip Release/HolidayDBMaker.prc Release/readme.txt
-	scp HolidayDBMaker.zip jmjeong.com:~/wikix/myfile/HolidayDBMaker
+upload: Release/HDMaker.prc
+	zip -r HDMaker.zip Release/HDMaker.prc Release/readme.txt
+	scp HDMaker.zip jmjeong.com:~/wikix/myfile/HolidayDBMaker
 
 clean:
 	-rm -f *.[oa] $(TARGET) *.bin bin.res *.grc Makefile.bak
