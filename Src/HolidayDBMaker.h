@@ -33,6 +33,7 @@ typedef union
 {
     struct 
     {
+		unsigned int dbonly  	:1;
         unsigned int solar      :1;
         unsigned int lunar      :1;
         unsigned int lunar_leap :1;

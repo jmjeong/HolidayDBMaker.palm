@@ -82,7 +82,7 @@ BEGIN
 										AUTO PrevHeight)
 END
 
-FORM ID DateBookForm AT (2 86 156 72)
+FORM ID DateBookForm AT (2 56 156 102)
 FRAME
 MODAL
 USABLE
@@ -97,21 +97,20 @@ BEGIN
 	LIST "" ID DateBookCategory AT ( PrevLeft PrevTop 70 AUTO ) 
 		NONUSABLE 
     POPUPLIST ID DateBookPopupTrigger DateBookNotifyCategory
-
-/*        
-	LABEL "Icon:" AUTOID AT (Right@60 PrevBottom+5) FONT 1
+    
+	LABEL "Icon:" AUTOID AT (Right@60 PrevBottom+8) FONT 1
     SELECTORTRIGGER "" ID DateBookIcon at (PrevRight+5 PrevTop
                 12 12) LEFTANCHOR FONT 0
-	LABEL "Format:" AUTOID AT (Right@60 PrevBottom+3) FONT 1
-    PUSHBUTTON "None" ID DatebookFormIconNone AT
-		(PrevRight+5  PrevTop AUTO AUTO) GROUP 1
+
+/*
+	LABEL "Format:" AUTOID AT (Right@60 PrevBottom+4) FONT 1
     PUSHBUTTON "AN" ID DatebookFormAgendus AT 
-		(PrevRight+1 PrevTop AUTO AUTO) GROUP 1
+		(PrevRight+5 PrevTop AUTO AUTO) GROUP 1
     PUSHBUTTON "DBk5" ID DatebookFormDateBk5 AT 
 		(PrevRight+1 PrevTop AUTO AUTO) GROUP 1
-*/
+*/        
 
-    BUTTON "OK" ID DateBookFormOk AT (5 Bottom@66 40 AUTO)
+    BUTTON "OK" ID DateBookFormOk AT (5 Bottom@96 40 AUTO)
     BUTTON "Cancel" ID DateBookFormCancel AT (PrevRight+5 PrevTop 40 AUTO)
 	GRAFFITISTATEINDICATOR AT (PrevRight+5 PrevTop)
 END
@@ -123,7 +122,7 @@ BEGIN
     TITLE "About"
 
     LABEL "HDMaker" AUTOID AT (CENTER 20) FONT 2
-    LABEL "Version 0.8" AUTOID AT (Center PrevBottom)
+    LABEL "Version 1.0b2" AUTOID AT (Center PrevBottom)
 
     LABEL "Copyright(c) 2004" AUTOID AT (CENTER PrevBottom+5)
     LABEL "Jaemok Jeong" AUTOID AT (CENTER PrevBottom)
@@ -156,24 +155,33 @@ BEGIN
     BUTTON "Cancel" ID PrefsCancelButton AT (51 63 40 12)
 END
 
+FORM ID ProgressForm AT (22 72 116 46)
+USABLE
+MODAL
+BEGIN
+	TITLE "Processing"
+	LABEL "Processed : " AUTOID AT (20 25) 
+	FIELD ID ProgressFormField AT (PrevRight+3 PrevTop 50 AUTO) NONEDITABLE
+END
+
 ICONFAMILYEX
 BEGIN
     BITMAP "25x22x2.bmp" BPP 1
     BITMAP "25x22x4.bmp" BPP 2
-    BITMAP "25x22x8.bmp" BPP 8 TRANSPARENTINDEX 210 COMPRESS
+    BITMAP "25x22x8.bmp" BPP 8 TRANSPARENTINDEX 0 COMPRESS
     BITMAP "50x44x2.bmp" BPP 1 DENSITY 2
     BITMAP "50x44x4.bmp" BPP 2 DENSITY 2
-    BITMAP "50x44x8.bmp" BPP 8 TRANSPARENTINDEX 210 COMPRESS DENSITY 2
+    BITMAP "50x44x8.bmp" BPP 8 TRANSPARENTINDEX 0 COMPRESS DENSITY 2
 END
 
 SMALLICONFAMILYEX
 BEGIN
     BITMAP "15x9x2.bmp"  BPP 1
     BITMAP "15x9x4.bmp"  BPP 2
-    BITMAP "15x9x8.bmp"  BPP 8 TRANSPARENTINDEX 210 COMPRESS
+    BITMAP "15x9x8.bmp"  BPP 8 TRANSPARENTINDEX 0 COMPRESS
     BITMAP "30x18x2.bmp" BPP 1 DENSITY 2
     BITMAP "30x18x4.bmp" BPP 2 DENSITY 2
-    BITMAP "30x18x8.bmp" BPP 8 TRANSPARENTINDEX 210 COMPRESS DENSITY 2
+    BITMAP "30x18x8.bmp" BPP 8 TRANSPARENTINDEX 0 COMPRESS DENSITY 2
 END
 
 ALERT ID CleanupAlert CONFIRMATION
@@ -236,6 +244,7 @@ STRING ID HelpString \
 "which contains National Holiday information used for WP+ or MonthPlanner.\n\n"\
 "- All lines staring with \';\' are comment.\n"\
 "- Description starts with \':\'\n"\
+"- Starting lines with \'*\' are ignored during Create HolidayDB.\n"\ 
 "- Each entry is divided with \'\\n\'\n"\
 "- You can specify the duration such as the day after or before holiday with \'[\' and \']\'\n"\
 "- If year field is specified, it only occurs on that year. Or it is repeated on the years specified in Prefs\n\n"\

@@ -30,6 +30,7 @@ DmOpenRef					 g_HolidayDB;
 DmOpenRef                    DatebookDB;
 DateFormatType				 g_prefdfmts;
 Char                         gAppErrStr[255];
+Int16                        iconNumber;
 
 /*********************************************************************
  * Internal Constants
@@ -46,6 +47,7 @@ static void CreateGenerateHoliday();
 static Boolean GenerateHoliday(Char *, Boolean);
 static int CleanupFromDB(DmOpenRef db);
 static Boolean IsHDMakerRecord(Char* description, Char* notefield);
+static FieldPtr SetFieldTextFromStr(FieldPtr fld, Char * strP);
 
 static char     HDMakerString[] = "* HDMaker";
 static Int16    MainFieldOffset = -1;
@@ -357,8 +359,7 @@ static void SaveFieldDataToDB()
 	if (FldDirty(fld)) {
 		FldCompactText(fld);
 		ptr = FldGetTextPtr(fld);
-		
-		if (DmQueryRecord(g_strDB, 0)) {
+		if (DmNumRecords(g_strDB) != 0) {
 			recordH = DmGetRecord(g_strDB, 0);
 			ErrFatalDisplayIf(!recordH, "error");
 			MemHandleResize(recordH, StrLen(ptr)+1);
@@ -674,7 +675,7 @@ static Int16 MakeNewHolidayRecord(UInt16 day, UInt16 month, UInt16 year, Holiday
     Boolean     made;
     
     if (hd.duration_count == 0) {
-        if (hddb) {
+        if (hddb && !hd.flag.bits.dbonly) {
             made = MakeActualNewHolidayRecord(day, month, year, hd);   
         }
         else {
@@ -690,7 +691,7 @@ static Int16 MakeNewHolidayRecord(UInt16 day, UInt16 month, UInt16 year, Holiday
 
             DateAdjust(&temp, hd.duration[i]);
 
-            if (hddb) {
+            if (hddb && !hd.flag.bits.dbonly) {
                 made = MakeActualNewHolidayRecord(temp.day, temp.month, temp.year+firstYear, hd);
             }
             else {
@@ -725,11 +726,19 @@ static Int16 AnalOneRecord(char* src, Holiday* hd)
     // description이 있는 경우 description 처리
     //
     if ((q = StrChr(src, ':'))) {
+		*q = 0;
+
         q++;
         while (*q == ' ' || *q == '\t')
             q++;
         StrNCopy(hd->description, q, 80);
     }
+	if (*src == '*') {
+		hd->flag.bits.dbonly = 1;
+		src++;
+		while (*src == ' ' || *src == '\t') src++;
+		s = src;
+	}
 
     if ((q = StrChr(src, '['))) {
         // [ 이 있는 경우 duration으로 판단 
@@ -893,15 +902,16 @@ static Int16 AnalOneRecord(char* src, Holiday* hd)
     }
     
  check:
-    if (hd->month < 1 || hd->month > 12)
-        return false;
-    if (hd->day < 1 || hd->day > 31)
-        return false;
-    
     if (hd->flag.bits.year) {
         if (hd->year >= 0 && hd->year <= 31) hd->year += 2000;          // 2000
         else if (hd->year > 31 && hd->year <= 99) hd->year += 1900;     // 1900
     }
+
+    if (hd->flag.bits.easter) return true;
+    if (hd->month < 1 || hd->month > 12) return false;
+
+    if (hd->flag.bits.dayofmonth) return true;
+    if (hd->day < 1 || hd->day > 31) return false;
     
     return true;
 }
@@ -1107,11 +1117,18 @@ static Boolean GenerateHoliday(Char* field, Boolean hddb)
     Int16   line = 0;
     Int16   count = 0;
     Holiday hd;
+    FormPtr formPtr;
+    char    temp[10];
 
  	str = MemPtrNew(StrLen(field)+1);
  	
     p = str;
     StrCopy(str, field);
+
+    formPtr = FrmInitForm(ProgressForm);
+    FrmDrawForm(formPtr);
+    FrmSetActiveForm(formPtr);
+    
 
     while ((q = StrChr(p, '\n'))) {
         *q = 0;
@@ -1121,8 +1138,12 @@ static Boolean GenerateHoliday(Char* field, Boolean hddb)
             ret = false;
             break;
         }
-        else count += MakeNewEntry(hd, hddb);
-
+        else {
+            count += MakeNewEntry(hd, hddb);
+            
+            StrPrintF(temp, "%d", line);
+            FldDrawField(SetFieldTextFromStr(GetObjectPtr(ProgressFormField), temp));
+        }
         if ((line+1) % 10 == 0) {
             // Reset the auto-off timer to make sure we don't
             // fall asleep in the
@@ -1136,8 +1157,14 @@ static Boolean GenerateHoliday(Char* field, Boolean hddb)
         if (!AnalOneRecord(p, &hd)) {
             ret = false;
         }
-        else count += MakeNewEntry(hd, hddb);
+        else {
+            count += MakeNewEntry(hd, hddb);
+
+            StrPrintF(temp, "%d", line);
+            FldDrawField(SetFieldTextFromStr(GetObjectPtr(ProgressFormField), temp));
+        }
     }
+    FrmReturnToForm(0);
     
     if (!ret) {
         // 에러가 난 행을 표시해 줌
@@ -1200,6 +1227,7 @@ static Boolean DateBookFormHandleEvent(EventType * eventP)
 		case frmOpenEvent:
 			DatebookFormInit(frmP);
 			FrmDrawForm(frmP);
+            // DrawFormANIcon(iconNumber, DatebookIcon);
 			handled = true;
 			break;
             
@@ -1318,7 +1346,6 @@ static Boolean MainFormHandleEvent(EventType * eventP)
         }
         break;
     case frmCloseEvent:
-    case appStopEvent:
         SaveFieldDataToDB();
 		
         // handled = true;	
@@ -1475,6 +1502,8 @@ static Err AppStart(void)
 
 static void AppStop(void)
 {
+	/* Close all the open forms. */
+	FrmCloseAllForms();
 	/* 
 	 * Write the saved preferences / saved-state information.  This
 	 * data will be saved during a HotSync backup. 
@@ -1485,10 +1514,6 @@ static void AppStop(void)
 		
 	DmCloseDatabase(g_strDB);
     DmCloseDatabase(DatebookDB);
-        
-	/* Close all the open forms. */
-	FrmCloseAllForms();
-
 }
 
 /*
