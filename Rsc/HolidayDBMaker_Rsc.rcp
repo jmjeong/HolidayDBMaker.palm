@@ -122,7 +122,7 @@ BEGIN
     TITLE "About"
 
     LABEL "HDMaker" AUTOID AT (CENTER 20) FONT 2
-    LABEL "Version 1.0b2" AUTOID AT (Center PrevBottom)
+    LABEL "Version 1.0b3" AUTOID AT (Center PrevBottom)
 
     LABEL "Copyright(c) 2004" AUTOID AT (CENTER PrevBottom+5)
     LABEL "Jaemok Jeong" AUTOID AT (CENTER PrevBottom)
@@ -262,3 +262,5 @@ STRING ID HelpString \
 "  @easter\n  @easter(year)\n\n"\
 "ex)\n@easter[4] ; Four days after Easter Sunday\n\n"
 
+
+VERSION ID 1 "1.0b3"
