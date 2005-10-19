@@ -1,13 +1,8 @@
 /*
  * HolidayDBMaker.c
  *
- * main file for HolidayDBMaker
+ * Copyright (c) 2003-2005 Jaemok Jeong<jmjeong@gmail.com>
  *
- * This wizard-generated code is based on code adapted from the
- * stationery files distributed as part of the Palm OS SDK 4.0.
- *
- * Copyright (c) 1999-2000 Palm, Inc. or its subsidiaries.
- * All rights reserved.
  */
  
 #include <PalmOS.h>
@@ -17,6 +12,8 @@
 #include "datebook.h"
 #include "HolidayDBMaker_Rsc.h"
 
+#include "lunar.h"
+
 /*********************************************************************
  * Global variables
  *********************************************************************/
@@ -24,13 +21,21 @@
  * g_prefs
  * cache for application preferences during program execution 
  */
-HolidayDBMakerPreferenceType g_prefs;
-DmOpenRef					 g_strDB;
-DmOpenRef					 g_HolidayDB;
-DmOpenRef                    DatebookDB;
-DateFormatType				 g_prefdfmts;
-Char                         gAppErrStr[255];
-Int16                        iconNumber;
+HolidayDBMakerPreferenceType    g_prefs;
+DmOpenRef					    g_strDB;
+DmOpenRef					    g_HolidayDB;
+DmOpenRef                       DatebookDB;
+DmOpenRef                       IconDB;
+DateFormatType				    g_prefdfmts;
+Char                            gAppErrStr[255];
+Int16                           iconNumber;
+
+UInt16                          lunarRefNum;
+UInt32                          lunarClientText;
+
+// Note 처리를 위한 temporary buffer
+Char                            *noteTempBuffer;
+
 
 /*********************************************************************
  * Internal Constants
@@ -39,6 +44,12 @@ Int16                        iconNumber;
 /* Define the minimum OS version we support */
 #define ourMinVersion    sysMakeROMVersion(3,0,0,sysROMStageDevelopment,0)
 #define kPalmOS20Version sysMakeROMVersion(2,0,0,sysROMStageDevelopment,0)
+
+extern void * GetObjectPtr(UInt16 objectID);
+
+extern void ProcessIconSelect();
+extern void DrawFormANIcon(Int16 iconNumber, Int16 id);
+extern DmOpenRef OpenIconSet(const Char *name, Boolean canUseDefault);
 
 /*********************************************************************
  * Internal Functions
@@ -51,31 +62,6 @@ static FieldPtr SetFieldTextFromStr(FieldPtr fld, Char * strP);
 
 static char     HDMakerString[] = "* HDMaker";
 static Int16    MainFieldOffset = -1;
-
-/*
- * FUNCTION: GetObjectPtr
- *
- * DESCRIPTION:
- *
- * This routine returns a pointer to an object in the current form.
- *
- * PARAMETERS:
- *
- * formId
- *     id of the form to display
- *
- * RETURNED:
- *     address of object as a void pointer
- */
-
-static void * GetObjectPtr(UInt16 objectID)
-{
-	FormType * frmP;
-
-	frmP = FrmGetActiveForm();
-	return FrmGetObjectPtr(frmP, FrmGetObjectIndex(frmP, objectID));
-}
-
 
 static Int16 DateCompare (DateType d1, DateType d2)
 {
@@ -648,6 +634,7 @@ static Boolean MakeNotifyDBRecord(UInt16 day, UInt16 month, UInt16 year, Holiday
     //
     datebook.exceptions = NULL;
     datebook.note = HDMakerString;
+    datebook.note = AdjustNote(g_prefs.iconNumber, datebook.note);
 
     // make the description
     datebook.description = hd.description;
@@ -919,21 +906,21 @@ static Int16 AnalOneRecord(char* src, Holiday* hd)
 static Boolean FindNearLunar(DateType *dt, DateType base, Boolean leapyes)
 {
     int lunyear, lunmonth, lunday;
-    DateTimeType rtVal;
+    int syear, smonth, sday;
     Int16 i;
-    extern int lun2sol(int lyear, int lmonth, int lday, int leapyes,
-                  DateTimeType *solar);
-
+    int ret;
 
     lunmonth = dt->month; lunday = dt->day;
 
     for (i = -1; i < 5; i++) {
         lunyear = base.year + firstYear + i;
 
-        if  (lun2sol(lunyear, lunmonth, lunday, leapyes, &rtVal)) continue;
-         
-        dt->year = rtVal.year - 1904;
-        dt->month = rtVal.month; dt->day = rtVal.day;
+        ret = lunarL2S(lunarRefNum, lunyear, lunmonth, lunday, leapyes, &syear, &smonth, &sday);
+        if (ret < 0) continue;
+        
+        dt->year = syear - firstYear;
+        dt->month = smonth;
+        dt->day = sday;
     
         if (DateCompare(base, *dt) <= 0) return true;
     }
@@ -1224,29 +1211,44 @@ static Boolean DateBookFormHandleEvent(EventType * eventP)
 
 	switch (eventP->eType) 
 	{
-		case frmOpenEvent:
-			DatebookFormInit(frmP);
-			FrmDrawForm(frmP);
-            // DrawFormANIcon(iconNumber, DatebookIcon);
-			handled = true;
-			break;
+    case frmOpenEvent:
+        DatebookFormInit(frmP);
+        FrmDrawForm(frmP);
+        DrawFormANIcon(g_prefs.iconNumber, DateBookIcon);
+        handled = true;
+        break;
             
-		case ctlSelectEvent:
-		{
-            switch (eventP->data.ctlSelect.controlID) {
-            case DateBookFormOk:
-                NotifyDatebookDB();
-            case DateBookFormCancel:
-                FrmGotoForm(MainForm);
-                handled = true;
-                break;
-            case DateBookPopupTrigger:
-                DatebookSelectCategory(&g_prefs.category);
-                handled = true;
-                break;
-            }
-			break;
-		}
+    case ctlSelectEvent:
+    {
+        switch (eventP->data.ctlSelect.controlID) {
+        case DateBookFormOk:
+            NotifyDatebookDB();
+        case DateBookFormCancel:
+            FrmGotoForm(MainForm);
+            handled = true;
+            break;
+        case DateBookPopupTrigger:
+            DatebookSelectCategory(&g_prefs.category);
+            handled = true;
+            break;
+        }
+        break;
+    }
+    
+    case ctlEnterEvent:
+        switch (eventP->data.ctlSelect.controlID) {
+        case DateBookIcon:
+        {
+            ProcessIconSelect();
+            DrawFormANIcon(g_prefs.iconNumber, DateBookIcon);
+            
+            handled = true;
+            break;
+        }
+        default:
+            break;
+        }
+        break;
 	}
 	return handled;
 }
@@ -1446,6 +1448,7 @@ static void AppEventLoop(void)
 static Err AppStart(void)
 {
 	UInt16 prefsSize;
+	Int16  error;
 	UInt16 mode = dmModeReadWrite;
 	SystemPreferencesType sysPrefs;
     char ForDateBookCategoryCheck[dmCategoryLength];
@@ -1475,7 +1478,6 @@ static Err AppStart(void)
 			return -1;
 			
 		g_strDB = DmOpenDatabaseByTypeCreator('Temp', appFileCreator, mode);
-	
 	}
     mode |= dmModeShowSecret;
     DatebookDB = DmOpenDatabaseByTypeCreator('DATA', 'date',
@@ -1489,7 +1491,17 @@ static Err AppStart(void)
 	//if Needed
 	CategoryGetName(DatebookDB, 0, ForDateBookCategoryCheck);
 	if (!*ForDateBookCategoryCheck) CategorySetName(DatebookDB,0,"Unfiled");
-    
+
+    IconDB = OpenIconSet("WPIcon", true);
+
+    error = lunar_OpenLibrary(&lunarRefNum, &lunarClientText);
+    if (error != errNone) {
+        FrmCustomAlert(ErrorAlert, "Please install lunarlib.prc", " ", " ");
+        return -1;
+    }
+
+    noteTempBuffer = MemPtrNew(4096 + 1);
+    ErrNonFatalDisplayIf ((!noteTempBuffer), "No Enough Memory");
 	
 	return errNone;
 }
@@ -1513,7 +1525,13 @@ static void AppStop(void)
 		&g_prefs, sizeof(g_prefs), true);
 		
 	DmCloseDatabase(g_strDB);
-    DmCloseDatabase(DatebookDB);
+    
+    if (DatebookDB) DmCloseDatabase(DatebookDB);
+    if (IconDB) DmCloseDatabase(IconDB);
+    
+    lunar_CloseLibrary(lunarRefNum, lunarClientText);
+
+    MemPtrFree(noteTempBuffer);
 }
 
 /*

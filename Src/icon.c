@@ -1,29 +1,74 @@
-#include "weeklyplan.h"
-#include "util.h"
-#include "hires.h"
+/*
+ * HolidayDBMaker.c
+ *
+ * Copyright (c) 2003-2005 Jaemok Jeong<jmjeong@gmail.com>
+ *
+ */
+ 
+#include <PalmOS.h>
+#include <PalmOSGlue.h>
 
-extern Int16 iconNumber;
+#include "HolidayDBMaker.h"
+#include "datebook.h"
+#include "HolidayDBMaker_Rsc.h"
+
+#include "lunar.h"
+
 extern Char *noteTempBuffer;
+extern DmOpenRef IconDB;
 
-extern void __WinDrawBitmap(const BitmapType *pbmp, Coord x, Coord y, Boolean small);
-extern Int16 DrawANIcon(Int16 iconNumber, Int16 x, Int16 y, Boolean desc);
-
-DmOpenRef OpenIconSet(const Char *name, Boolean canUseDefault);
-Int16 DrawIconBitmap(UInt16 iconID, Coord x, Coord y, Boolean small);
 Boolean IconSelectHandleEvent(EventPtr eventP);
 
+DmOpenRef OpenIconSet(const Char *name, Boolean canUseDefault);
+Boolean IconSelectHandleEvent(EventPtr eventP);
 void DrawFormANIcon(Int16 iconNumber, Int16 id);
+
 void AdjustIconSelTrigger(Int16 idx);
 void ProcessIconSelect();
 Char* AdjustNote(Int16 iconNumber, Char* str);
-// void InvertFormANIcon(Int16 id);
+UInt16 DisplayDialog( UInt16 formID, FormEventHandlerPtr handler );
+void * GetObjectPtr(UInt16 objectID);
 
 static Int16 LoadIcon(Int16 start);
 static void IconFormScrollLines(Int16 lines);
+static Int16 DrawANIcon(Int16 iconNumber, Int16 x, Int16 y);
 
 // trick : only used in todopref.c
 // 	(Bugs in FrmDoDialog : always return Cancel)
 Boolean IconSelectCancelPressed;
+
+static void ShowObject (FormPtr frm, UInt16 objectID)
+{
+	FrmShowObject (frm, FrmGetObjectIndex (frm, objectID));
+}
+
+static void HideObject (FormPtr frm, UInt16 objectID)
+{
+	FrmHideObject (frm, FrmGetObjectIndex (frm, objectID));
+}
+
+/*
+ * FUNCTION: GetObjectPtr
+ *
+ * DESCRIPTION:
+ *
+ * This routine returns a pointer to an object in the current form.
+ *
+ * PARAMETERS:
+ *
+ * formId
+ *     id of the form to display
+ *
+ * RETURNED:
+ *     address of object as a void pointer
+ */
+void * GetObjectPtr(UInt16 objectID)
+{
+	FormType * frmP;
+
+	frmP = FrmGetActiveForm();
+	return FrmGetObjectPtr(frmP, FrmGetObjectIndex(frmP, objectID));
+}
 
 /*
  * OpenIconSet - returns a DmOpenRef to an icon set
@@ -41,7 +86,6 @@ Boolean IconSelectCancelPressed;
  *                  is required to call DmCloseDatabase() to close it when
  *                  the caller is finished with it.
  */
-
 DmOpenRef OpenIconSet(const Char *name, Boolean canUseDefault)
 {
     DmOpenRef pdb = 0;
@@ -78,54 +122,49 @@ DmOpenRef OpenIconSet(const Char *name, Boolean canUseDefault)
     return pdb;
 }
 
-Int16 DrawIconBitmap(UInt16 iconID, Coord x, Coord y, Boolean small)
+static Int16 DrawIconBitmap(UInt16 iconID, Coord x, Coord y)
 {
 	MemHandle pointH;
 	BitmapPtr pbmp;
-    Int16     ret = 0;
 	
 	if (IconDB) {
 	 	pointH = DmGet1Resource('Tbmp', iconID);
 		pbmp = (pointH) ? MemHandleLock(pointH) : NULL;
 
 	    if (pbmp) {
-	    	__WinDrawBitmap(pbmp, x, y, small); 
+	    	WinDrawBitmap(pbmp, x, y); 
 	    	
 	        MemHandleUnlock(pointH);
 	        DmReleaseResource(pointH);
-	        
-	       	ret = (small) ?  5 : 10;
-    
-    		if (mType >= SonyClie) ret <<= 1;
-    		else if (mType == Handera330) {
-		    	ret = 10;
-		    }
-		    ret++;
-		}	 
+            return 1;
+		}
 	}
 
-	return ret;
+	return 0;
 }
 
-void AdjustIconSelTrigger(Int16 id)
+Int16 DrawANIcon(Int16 iconNumber, Int16 x, Int16 y)
 {
-    FormPtr frmP = FrmGetActiveForm();
-    RectangleType r;
-    UInt16  idx = FrmGetObjectIndex(frmP, id);
+	// icon handling
+    Int16       curFont;
+    Int16       height, adjust = 0;
+    Int16       width = 0;
 
-    FrmGetObjectBounds(frmP, idx, &r);
+    curFont = FntSetFont(stdFont);
+    height = FntCharHeight();
+    FntSetFont(curFont);
 
-    r.extent.x = 12;
-    r.extent.y = 11;
-
-    if (mType == Handera330) {
-        r.extent.x += r.extent.x/2;
-        r.extent.y += r.extent.y/2;
+    // 20 x 18;
+    //
+    adjust = 9;
+    width = 12;
+    y += (height - adjust)/2;
+    
+    if (DrawIconBitmap(iconNumber, x, y+1)) {
+        return width;
     }
-
-    FrmSetObjectBounds(frmP, idx, &r);
+    else return 0;
 }
-
 
 // Graphics icon setting
 //
@@ -139,44 +178,46 @@ void DrawFormANIcon(Int16 iconNumber, Int16 id)
     FrmGetObjectPosition(frmP, idx, &x, &y);
     FrmGetObjectBounds(frmP, idx, &r);
     
-    if (mType >= SonyClie) {
-        x <<= 1;
-        y <<= 1;
-
-        r.extent.x <<= 1;
-        r.extent.y <<= 1;
-    }
     r.topLeft.x = x;
     r.topLeft.y = y;
 
-    gWinEraseRectangle(&r, 0);
+    WinEraseRectangle(&r, 0);
 
-    if (mType == Handera330) {
-        x += 3;
-    }
-    
-    if (iconNumber >=0 ) {
-        DrawANIcon(iconNumber, x+1, y, true);
-    }
+    if (iconNumber >= 0) DrawANIcon(iconNumber, x+1, y);
 }
 
-/*
-void InvertFormANIcon(Int16 id)
+void AdjustIconSelTrigger(Int16 id)
 {
     FormPtr frmP = FrmGetActiveForm();
-    UInt16 idx = FrmGetObjectIndex(frmP, id);
-    Int16 x, y;
     RectangleType r;
+    UInt16  idx = FrmGetObjectIndex(frmP, id);
 
     FrmGetObjectBounds(frmP, idx, &r);
-    FrmGetObjectPosition(frmP, idx, &x, &y);
 
-    r.topLeft.x = x;
-    r.topLeft.y = y;
+    r.extent.x = 12;
+    r.extent.y = 11;
 
-    gWinInvertRectangle(&r, 0);
+    FrmSetObjectBounds(frmP, idx, &r);
 }
-*/
+
+UInt16 DisplayDialog( UInt16 formID, FormEventHandlerPtr handler ) 
+{ 
+	FormPtr active = FrmGetActiveForm();
+    
+	UInt16 activeID = ( active != NULL ) ? FrmGetFormId( active ) : 0;
+	FormPtr dialog = FrmInitForm( formID );
+	UInt16 buttonPressed = 0;
+    
+	FrmSetActiveForm( dialog ); 
+	if( handler ){ 
+		FrmSetEventHandler( dialog, handler ); 
+	} 
+	FrmPopupForm( formID ); 
+	buttonPressed = FrmDoDialog( dialog ); 
+	FrmReturnToForm( activeID );
+    
+	return buttonPressed;
+} 
 
 void ProcessIconSelect()
 {
@@ -184,7 +225,7 @@ void ProcessIconSelect()
         DisplayDialog(IconSelectForm, IconSelectHandleEvent) ;
     }
     else {
-        gFrmCustomAlert(gPrefs->gErrorAlert,  "IconDB is not installed", "", "");
+        FrmCustomAlert(ErrorAlert,  "IconDB is not installed", "", "");
     }
 }
 
@@ -204,7 +245,7 @@ static void IconFormScrollLines(Int16 lines)
     Int16           newValue;
 	FormPtr			frm = FrmGetActiveForm();
 
-    barP = GetObjectPtr(IconSelectIconScrollBar);
+    barP = GetObjectPtr(IconSelectScrollBar);
     SclGetScrollBar(barP, &valueP, &minP, &maxP, &pageSizeP);
 
     //scroll up
@@ -245,34 +286,23 @@ static Int16 LoadIcon(Int16 start)
 
     num = DmNumResources(IconDB);
     
-	for (i = 0; i < 9*8; i++) {
+	for (i = 0; i < 8*9; i++) {
         UInt16 idx = FrmGetObjectIndex(frmP, iconButtonID + i);
 
         FrmGetObjectPosition(frmP, idx, &x, &y);
         FrmGetObjectBounds(frmP, idx, &r);
 
-        if (mType >= SonyClie) {
-            x <<=1; y <<=1;
-            r.extent.x <<= 1;
-            r.extent.y <<= 1;
-        }
-                
         r.topLeft.x = x;
         r.topLeft.y = y;
 
-        gWinEraseRectangle(&r, 0);
+        WinEraseRectangle(&r, 0);
 
-        if (mType == Handera330) {
-            x += 4;
-            y += 3;
-        }
-        
         if (i+start <num) {
             h = DmGetResourceIndex(IconDB, i + start);
             pbmp = (h) ? MemHandleLock(h) : NULL;
 
             if (pbmp) {
-                __WinDrawBitmap(pbmp, x, y, false);
+                WinDrawBitmap(pbmp, x, y);
                                 
                 MemHandleUnlock(h);
                 DmReleaseResource(h);
@@ -302,16 +332,10 @@ Boolean IconSelectHandleEvent(EventPtr eventP)
         return handled;
 			
     case frmOpenEvent:
-    /*
-    // 미리 DoDialog에서 처리
-        if (mType == Handera330 && gPrefs->rotateMode == rotateModeNone) {
-            VgaFormModify(frmP, vgaFormModify160To240);
-        }
-	*/
         FrmDrawForm(frmP);
         num = LoadIcon(0);
 
-        barP = GetObjectPtr(IconSelectIconScrollBar);
+        barP = GetObjectPtr(IconSelectScrollBar);
         if (num > 9*8) {
             SclSetScrollBar(barP, 0, 0, num/8-8, 9);
         }
@@ -328,16 +352,16 @@ Boolean IconSelectHandleEvent(EventPtr eventP)
             Int16   val, min, max, page;
             DmResID resID;
 
-            SclGetScrollBar(GetObjectPtr(IconSelectIconScrollBar),
+            SclGetScrollBar(GetObjectPtr(IconSelectScrollBar),
                             &val, &min, &max, &page);
 
             DmResourceInfo(IconDB, (val*8+ eventP->data.ctlSelect.controlID - IconSelectIcon1Button),
                            NULL, &resID, NULL);
-			iconNumber = resID;                           
+			g_prefs.iconNumber = resID;                           
         }
         switch (eventP->data.ctlSelect.controlID) {
         case IconSelectNoneButton:
-            iconNumber = -1;
+            g_prefs.iconNumber = -1;
             break;
         case IconSelectCancelButton:
         	IconSelectCancelPressed = true;
@@ -360,7 +384,7 @@ Boolean IconSelectHandleEvent(EventPtr eventP)
     {
 		Int16		valueP, minP, maxP, pageSizeP;
 
-		ScrollBarPtr barP = GetObjectPtr(IconSelectIconScrollBar);
+		ScrollBarPtr barP = GetObjectPtr(IconSelectScrollBar);
 		SclGetScrollBar(barP, &valueP, &minP, &maxP, &pageSizeP);
 
 		switch (eventP->data.keyDown.chr) {
@@ -385,9 +409,9 @@ Boolean IconSelectHandleEvent(EventPtr eventP)
 	return handled;
 }
 
-
 Char* AdjustNote(Int16 iconNumber, Char* note)
 {
+    extern Char gAppErrStr[];
     Char *p, *q;
 
     noteTempBuffer[0] = 0;
@@ -427,8 +451,8 @@ Char* AdjustNote(Int16 iconNumber, Char* note)
                     q = p;
                 }
 
-                StrPrintF(AppErrStr, "ICON: %d\n", iconNumber);
-                StrNCat(noteTempBuffer, AppErrStr, 4096);
+                StrPrintF(gAppErrStr, "ICON: %d\n", iconNumber);
+                StrNCat(noteTempBuffer, gAppErrStr, 4096);
 
                 StrNCat(noteTempBuffer, q, 4096);
             }
