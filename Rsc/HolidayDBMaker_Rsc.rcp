@@ -82,7 +82,7 @@ BEGIN
 										AUTO PrevHeight)
 END
 
-FORM ID DateBookForm AT (2 56 156 102)
+FORM ID DateBookForm AT (2 76 156 82)
 FRAME
 MODAL
 USABLE
@@ -98,9 +98,8 @@ BEGIN
 		NONUSABLE 
     POPUPLIST ID DateBookPopupTrigger DateBookNotifyCategory
     
-	LABEL "Icon:" AUTOID AT (Right@60 PrevBottom+8) FONT 1
-    SELECTORTRIGGER "" ID DateBookIcon at (PrevRight+5 PrevTop
-                12 12) LEFTANCHOR FONT 0
+	LABEL "Icon:" AUTOID AT (Right@60 PrevBottom+5) FONT 1
+    SELECTORTRIGGER "" ID DateBookIcon at (PrevRight+5 PrevTop 12 12) LEFTANCHOR FONT 0
 
 /*
 	LABEL "Format:" AUTOID AT (Right@60 PrevBottom+4) FONT 1
@@ -110,7 +109,7 @@ BEGIN
 		(PrevRight+1 PrevTop AUTO AUTO) GROUP 1
 */        
 
-    BUTTON "OK" ID DateBookFormOk AT (5 Bottom@96 40 AUTO)
+    BUTTON "OK" ID DateBookFormOk AT (5 Bottom@76 40 AUTO)
     BUTTON "Cancel" ID DateBookFormCancel AT (PrevRight+5 PrevTop 40 AUTO)
 	GRAFFITISTATEINDICATOR AT (PrevRight+5 PrevTop)
 END
@@ -122,9 +121,9 @@ BEGIN
     TITLE "About"
 
     LABEL "HDMaker" AUTOID AT (CENTER 20) FONT 2
-    LABEL "Version 1.0b3" AUTOID AT (Center PrevBottom)
+    LABEL "Version 1.0" AUTOID AT (Center PrevBottom)
 
-    LABEL "Copyright(c) 2004" AUTOID AT (CENTER PrevBottom+5)
+    LABEL "Copyright(c) 2004-5" AUTOID AT (CENTER PrevBottom+5)
     LABEL "Jaemok Jeong" AUTOID AT (CENTER PrevBottom)
     LABEL "All Rights Reserved" AUTOID AT (CENTER PrevBottom)
 
@@ -162,6 +161,100 @@ BEGIN
 	TITLE "Processing"
 	LABEL "Processed : " AUTOID AT (20 25) 
 	FIELD ID ProgressFormField AT (PrevRight+3 PrevTop 50 AUTO) NONEDITABLE
+END
+
+FORM ID IconSelectForm AT (45 18 113 140)
+USABLE
+MODAL SAVEBEHIND
+DEFAULTBTNID IconSelectCancelButton
+BEGIN
+    TITLE "Icon Select"
+
+    BUTTON "None" ID IconSelectNoneButton AT (6 122 35 12)
+    BUTTON "Cancel" ID IconSelectCancelButton AT (45 122 35 12)
+
+    SCROLLBAR IconSelectScrollBar AT (102 15 7 99) USABLE VALUE 0 MIN 0 MAX 0 PAGESIZE 0
+    
+    BUTTON "" ID IconSelectIcon1Button  AT (8 15 11 10) NOFRAME    
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME 
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+
+    BUTTON "" AUTOID  AT (8 26 11 10) NOFRAME 
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+
+    BUTTON "" AUTOID  AT (8 37 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+
+    BUTTON "" AUTOID  AT (8 48 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+
+    BUTTON "" AUTOID  AT (8 59 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+
+    BUTTON "" AUTOID  AT (8 70 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+
+    BUTTON "" AUTOID  AT (8 81 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+
+    BUTTON "" AUTOID  AT (8 92 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+
+    BUTTON "" AUTOID  AT (8 103 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
+    BUTTON "" AUTOID  AT (PrevLeft+11 PrevTop 11 10) NOFRAME
 END
 
 ICONFAMILYEX
@@ -262,5 +355,4 @@ STRING ID HelpString \
 "  @easter\n  @easter(year)\n\n"\
 "ex)\n@easter[4] ; Four days after Easter Sunday\n\n"
 
-
-VERSION ID 1 "1.0b3"
+VERSION ID 1 "1.0"
