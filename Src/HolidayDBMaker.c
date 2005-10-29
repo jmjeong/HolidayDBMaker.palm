@@ -50,6 +50,7 @@ extern void * GetObjectPtr(UInt16 objectID);
 extern void ProcessIconSelect();
 extern void DrawFormANIcon(Int16 iconNumber, Int16 id);
 extern DmOpenRef OpenIconSet(const Char *name, Boolean canUseDefault);
+extern Char* AdjustNote(Int16 iconNumber, Char* note);
 
 /*********************************************************************
  * Internal Functions
@@ -59,6 +60,7 @@ static Boolean GenerateHoliday(Char *, Boolean);
 static int CleanupFromDB(DmOpenRef db);
 static Boolean IsHDMakerRecord(Char* description, Char* notefield);
 static FieldPtr SetFieldTextFromStr(FieldPtr fld, Char * strP);
+static void CloseHolidayDB();
 
 static char     HDMakerString[] = "* HDMaker";
 static Int16    MainFieldOffset = -1;
@@ -363,6 +365,7 @@ static void SaveFieldDataToDB()
 	g_prefs.offset = FldGetInsPtPosition(fld);
 }
 
+/*
 static void CleanupHoliday(DmOpenRef dbP)
 {
     UInt16 currindex = 0;
@@ -378,6 +381,7 @@ static void CleanupHoliday(DmOpenRef dbP)
         }
     }
 }
+*/
 
 static Boolean IsHDMakerRecord(Char* description, Char* notefield)
 {
@@ -438,18 +442,24 @@ static Int16 CreateHolidayDB()
     g_HolidayDB = DmOpenDatabaseByTypeCreator('DATA', holiFileCreator,
                                          mode | dmModeReadWrite);
     if (g_HolidayDB){
-        CleanupHoliday(g_HolidayDB);
+        LocalID dbID; 
+
+        CloseHolidayDB();
+
+        dbID = DmFindDatabase (0, "HolidayDB");        
+        DmDeleteDatabase(0, dbID);
+        
+        // CleanupHoliday(g_HolidayDB);
     }
-    else {
-        //
-        // Create our database if it doesn't exist yet
-        //
-        if (DmCreateDatabase(0, "HolidayDB", holiFileCreator, 'DATA', false))
-            return -1;
-        g_HolidayDB = DmOpenDatabaseByTypeCreator('DATA', holiFileCreator,
-                                             dmModeReadWrite);
-        if (!g_HolidayDB) return -1;
-    }
+    
+    //
+    // Create our database if it doesn't exist yet
+    //
+    if (DmCreateDatabase(0, "HolidayDB", holiFileCreator, 'DATA', false))
+        return -1;
+    
+    g_HolidayDB = DmOpenDatabaseByTypeCreator('DATA', holiFileCreator, dmModeReadWrite);
+    if (!g_HolidayDB) return -1;
 
     return 0;
 }
@@ -479,7 +489,6 @@ static UInt16 HolidayFindSortPosition(DmOpenRef dbP, void* date)
 {
     return DmFindSortPosition(dbP, (void*)date, 0,(DmComparF *)HolidayComparePackedRecords, 0);
 }
-
 
 
 static Int16 HolidayNewRecord(DmOpenRef dbP, DateType *r, UInt16 *index)

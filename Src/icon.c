@@ -273,6 +273,26 @@ static void IconFormScrollLines(Int16 lines)
     IconFormScroll(newValue, valueP);
 }
 
+/*
+ * GetIconByIndex - get an icon by index.
+ *
+ * Call this to get a BitmapPtr for the specified icon index number.  This
+ * returns NULL if the resouce at the specified index is not an icon, or if
+ * the specified index is out of range (greater than the number returned by
+ * DmNumResources() for the icon set).
+ */
+static BitmapPtr GetIconByIndex(DmOpenRef pdb, UInt16 iconIndex)
+{
+    UInt32 typeRes;
+
+    DmResourceInfo(pdb, iconIndex, &typeRes, 0, 0);
+
+    if (bitmapRsc != typeRes)
+        return NULL;
+
+    return (BitmapPtr)DmGetResourceIndex(pdb, iconIndex);
+}
+
 static Int16 LoadIcon(Int16 start)
 {
 	FormPtr     frmP = FrmGetActiveForm();
@@ -285,8 +305,9 @@ static Int16 LoadIcon(Int16 start)
     RectangleType r;
 
     num = DmNumResources(IconDB);
+    if (start > num) start = 0;
     
-	for (i = 0; i < 8*9; i++) {
+	for (i = 0; i < 9*8; i++) {
         UInt16 idx = FrmGetObjectIndex(frmP, iconButtonID + i);
 
         FrmGetObjectPosition(frmP, idx, &x, &y);
@@ -298,7 +319,7 @@ static Int16 LoadIcon(Int16 start)
         WinEraseRectangle(&r, 0);
 
         if (i+start <num) {
-            h = DmGetResourceIndex(IconDB, i + start);
+            h = (MemPtr)GetIconByIndex(IconDB, i + start);
             pbmp = (h) ? MemHandleLock(h) : NULL;
 
             if (pbmp) {
