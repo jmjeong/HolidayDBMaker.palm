@@ -61,6 +61,7 @@ static int CleanupFromDB(DmOpenRef db);
 static Boolean IsHDMakerRecord(Char* description, Char* notefield);
 static FieldPtr SetFieldTextFromStr(FieldPtr fld, Char * strP);
 static void CloseHolidayDB();
+static void DeleteHolidayDB();
 
 static char     HDMakerString[] = "* HDMaker";
 static Int16    MainFieldOffset = -1;
@@ -189,6 +190,12 @@ static void CleanupDatebookDB()
     }
 }
 
+static void CleanupHolidayDB()
+{
+    DeleteHolidayDB();
+    FrmCustomAlert(CleanupHolidayDBDone, " ", " ", " ");
+}
+
 /*
  * FUNCTION: MainFormDoCommand
  *
@@ -209,6 +216,13 @@ static Boolean MainFormDoCommand(UInt16 command)
     case OptionsGenerate:
     {
         CreateGenerateHoliday();
+        handled = true;
+        break;
+    }
+    case OptionsCleanupHolidayDB:
+    {
+        CleanupHolidayDB();
+        
         handled = true;
         break;
     }
@@ -435,6 +449,16 @@ static int CleanupFromDB(DmOpenRef db)
     return ret;
 }
 
+static void DeleteHolidayDB()
+{
+    LocalID dbID; 
+
+    dbID = DmFindDatabase (0, "HolidayDB");        
+    DmDeleteDatabase(0, dbID);
+
+    // CleanupHoliday(g_HolidayDB);
+}
+
 static Int16 CreateHolidayDB()
 {
     UInt16 mode = 0;
@@ -442,14 +466,9 @@ static Int16 CreateHolidayDB()
     g_HolidayDB = DmOpenDatabaseByTypeCreator('DATA', holiFileCreator,
                                          mode | dmModeReadWrite);
     if (g_HolidayDB){
-        LocalID dbID; 
-
         CloseHolidayDB();
 
-        dbID = DmFindDatabase (0, "HolidayDB");        
-        DmDeleteDatabase(0, dbID);
-        
-        // CleanupHoliday(g_HolidayDB);
+        DeleteHolidayDB();
     }
     
     //

@@ -11,10 +11,11 @@ MENU ID MainMenuBar
 BEGIN
     PULLDOWN "Utility"
     BEGIN
-        MENUITEM "DateBook Notify"  ID OptionsNotifyDatebook  "D"
-        MENUITEM "Cleanup DateBook" ID OptionsCleanupDatebook "C"
+        MENUITEM "DateBook Notify"  ID OptionsNotifyDatebook    "D"
+        MENUITEM "Cleanup DateBook" ID OptionsCleanupDatebook   "C"
         MENUITEM SEPARATOR
-        MENUITEM "Generate HolidayDB"  ID OptionsGenerate "H"
+        MENUITEM "Generate HolidayDB"ID OptionsGenerate         "H"
+        MENUITEM "Cleanup HolidayDB" ID OptionsCleanupHolidayDB "Z"
     END
     PULLDOWN "Edit"
     BEGIN
@@ -121,7 +122,7 @@ BEGIN
     TITLE "About"
 
     LABEL "HDMaker" AUTOID AT (CENTER 20) FONT 2
-    LABEL "Version 1.01" AUTOID AT (Center PrevBottom)
+    LABEL "Version 1.2" AUTOID AT (Center PrevBottom)
 
     LABEL "Copyright(c) 2004-5" AUTOID AT (CENTER PrevBottom+5)
     LABEL "Jaemok Jeong" AUTOID AT (CENTER PrevBottom)
@@ -133,7 +134,6 @@ BEGIN
     BUTTON "OK" ID AboutOKButton AT (58 133 40 12)
 
 END
-
 
 FORM ID PrefsForm AT (2 78 156 80)
     SAVEBEHIND MODAL
@@ -293,6 +293,14 @@ BEGIN
     BUTTONS "OK"
 END
 
+ALERT ID CleanupHolidayDBDone INFORMATION
+BEGIN
+    TITLE "Cleanup Done"
+    MESSAGE "HolidayDB is removed."
+    BUTTONS "OK"
+END
+
+
 ALERT ID ErrorAlert
 BEGIN
      TITLE "Input Error"
@@ -355,4 +363,4 @@ STRING ID HelpString \
 "  @easter\n  @easter(year)\n\n"\
 "ex)\n@easter[4] ; Four days after Easter Sunday\n\n"
 
-VERSION ID 1 "1.01"
+VERSION ID 1 "1.2"
