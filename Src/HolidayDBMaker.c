@@ -1480,6 +1480,8 @@ static Err AppStart(void)
 	UInt16 mode = dmModeReadWrite;
 	SystemPreferencesType sysPrefs;
     char ForDateBookCategoryCheck[dmCategoryLength];
+    DmOpenRef compDBRef;
+    Boolean isNewPIMS;
 	
 	/* Read the saved preferences / saved-state information. */
 	prefsSize = sizeof(g_prefs);
@@ -1508,15 +1510,34 @@ static Err AppStart(void)
 		g_strDB = DmOpenDatabaseByTypeCreator('Temp', appFileCreator, mode);
 	}
     mode |= dmModeShowSecret;
-    DatebookDB = DmOpenDatabaseByTypeCreator('DATA', 'date',
-                                             mode | dmModeReadWrite);
+
+    compDBRef = DmOpenDatabaseByTypeCreator('aexo', 'pdmE', dmModeReadOnly);
+    if (!compDBRef) {
+        isNewPIMS = false;
+    }
+    else {
+        DmCloseDatabase(compDBRef);
+        isNewPIMS = true;
+    }
+
+    if (isNewPIMS) {
+        // New PIMS system인 경우에는 Calendar를 읽음
+        DatebookDB = DmOpenDatabaseByTypeCreator('DATA', 'PDat',
+                                                 mode | dmModeReadWrite);
+    }
+    else {
+        // 아닌 경우에는 legacy Datebook 을 읽음
+        DatebookDB = DmOpenDatabaseByTypeCreator('DATA', 'date',
+                                                 mode | dmModeReadWrite);
+    }
     if (!DatebookDB) {
         SysCopyStringResource(gAppErrStr, DateBookFirstAlertString);
         FrmCustomAlert(ErrorAlert, gAppErrStr, " ", " ");
         return -1;
     }
-	//Prepare DateBook AppInfoBlock
-	//if Needed
+    
+	// Prepare DateBook AppInfoBlock
+	// if Needed
 	CategoryGetName(DatebookDB, 0, ForDateBookCategoryCheck);
 	if (!*ForDateBookCategoryCheck) CategorySetName(DatebookDB,0,"Unfiled");
 
